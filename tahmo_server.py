@@ -20,15 +20,26 @@ Options:
 Corporate proxy? Set these BEFORE running (Windows CMD example):
     set HTTPS_PROXY=http://your.proxy:port
     set HTTP_PROXY=http://your.proxy:port
+
+Cloud deploy (e.g. Render): the host reads the PORT env var automatically
+and binds 0.0.0.0. Set DASH_USER + DASH_PASS env vars to require an HTTP
+Basic Auth login before the dashboard (or its API) is served -- leave both
+unset for open local use.
 """
 import http.server, socketserver, urllib.request, urllib.error
-import json, os, sys, ssl, time, threading, webbrowser
+import base64, hmac, json, os, sys, ssl, time, threading, webbrowser
 
 # ---- args ----
 args = sys.argv[1:]
 INSECURE = "--insecure" in args
 args = [a for a in args if a != "--insecure"]
-PORT = int(args[0]) if args else 8000
+PORT = int(os.environ.get("PORT") or (args[0] if args else 8000))
+HOST = "0.0.0.0"
+ON_CLOUD = bool(os.environ.get("RENDER") or os.environ.get("PORT"))
+
+DASH_USER = os.environ.get("DASH_USER", "")
+DASH_PASS = os.environ.get("DASH_PASS", "")
+AUTH_REQUIRED = bool(DASH_USER and DASH_PASS)
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 HTML_FILE = os.path.join(HERE, "tahmo_live.html")
@@ -99,7 +110,31 @@ class Handler(http.server.BaseHTTPRequestHandler):
         if body:
             self.wfile.write(body)
 
+    def _authorized(self):
+        if not AUTH_REQUIRED:
+            return True
+        header = self.headers.get("Authorization", "")
+        if not header.startswith("Basic "):
+            return False
+        try:
+            user, pw = base64.b64decode(header[6:]).decode("utf-8").split(":", 1)
+        except Exception:
+            return False
+        # constant-time compare to avoid leaking the password via timing
+        return hmac.compare_digest(user, DASH_USER) and hmac.compare_digest(pw, DASH_PASS)
+
+    def _require_auth(self):
+        self.send_response(401)
+        self.send_header("WWW-Authenticate", 'Basic realm="TAHMO Portal"')
+        self.send_header("Content-Type", "text/plain; charset=utf-8")
+        self.end_headers()
+        self.wfile.write(b"Authentication required.")
+
     def do_GET(self):
+        if not self._authorized():
+            self._require_auth()
+            return
+
         path = self.path.split("?")[0]
 
         if path in ("/", "/index.html", "/tahmo_live.html"):
@@ -156,7 +191,7 @@ def preflight():
 def main():
     socketserver.TCPServer.allow_reuse_address = True
     try:
-        httpd = socketserver.ThreadingTCPServer(("127.0.0.1", PORT), Handler)
+        httpd = socketserver.ThreadingTCPServer((HOST, PORT), Handler)
     except OSError as e:
         print(f"[!] Could not bind port {PORT}: {e}")
         print(f"    Another program may be using it. Try: python tahmo_server.py {PORT+1}")
@@ -164,11 +199,15 @@ def main():
     with httpd:
         url = f"http://localhost:{PORT}/"
         print(f"TAHMO live dashboard running at {url}")
-        print("Leave this window open. Press Ctrl+C to stop.\n")
+        if AUTH_REQUIRED:
+            print("Login required (DASH_USER / DASH_PASS are set).")
+        if not ON_CLOUD:
+            print("Leave this window open. Press Ctrl+C to stop.\n")
         # Server is already listening; run the connectivity check in the
         # background so a slow feed never delays startup or the browser.
         threading.Thread(target=preflight, daemon=True).start()
-        threading.Timer(0.8, lambda: webbrowser.open(url)).start()
+        if not ON_CLOUD:
+            threading.Timer(0.8, lambda: webbrowser.open(url)).start()
         try:
             httpd.serve_forever()
         except KeyboardInterrupt:
