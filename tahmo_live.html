@@ -265,9 +265,9 @@
   <section id="tab-trends" class="hide">
     <div class="page-header">
       <div><div class="country" id="tr-country">Pan-Africa · Trends &amp; Change Detection</div>
-      <div class="sub">Snapshots are saved in this browser · click “Save snapshot” to add one</div></div>
+      <div class="sub">🌍 Pan-Africa auto-captured daily at 6am EAT · plus any snapshots you save manually in this browser</div></div>
     </div>
-    <div id="tr-empty" class="info-panel">No snapshots yet. Click <strong>📸 Save snapshot</strong> (sidebar) to store the current state. Save one weekly (or daily); with two or more you’ll see change over time here.</div>
+    <div id="tr-empty" class="info-panel">No snapshots yet. The network auto-captures a Pan-Africa snapshot every day at 6am EAT — check back after the first run, or click <strong>📸 Save snapshot</strong> (sidebar) to add one for the current scope right now.</div>
     <div id="tr-content" class="hide">
       <div class="section-label">Network Health Over Time</div>
       <div class="card"><div id="tr-line" style="height:300px"></div></div>
@@ -544,9 +544,25 @@ function renderAnalytics(){
   document.getElementById("dd-issue").innerHTML=dd(issC,issStations)||'<div class="info-panel">None</div>';
 }
 
-/* ============================ TRENDS TAB (localStorage) ============================ */
+/* ============================ TRENDS TAB (shared daily snapshots + local manual ones) ============================ */
 const SNAP_KEY="tahmo_snapshots_v1";
-function loadSnaps(){try{return JSON.parse(localStorage.getItem(SNAP_KEY))||[];}catch(e){return[];}}
+// Committed once a day at 6am EAT by .github/workflows/daily-snapshot.yml -- same file for every visitor.
+const SNAPSHOTS_URL="https://raw.githubusercontent.com/mwangilbert/TAHMO-Network/main/snapshots.json";
+let REMOTE_SNAPS=[];
+async function loadRemoteSnaps(){
+  try{
+    const r=await fetch(SNAPSHOTS_URL+"?t="+Date.now(),{cache:"no-store"});
+    if(r.ok){REMOTE_SNAPS=await r.json();if(ACTIVE==="trends")renderTrends();}
+  }catch(e){/* offline or not deployed yet -- local snapshots still work */}
+}
+function loadSnaps(){
+  let local;try{local=JSON.parse(localStorage.getItem(SNAP_KEY))||[];}catch(e){local=[];}
+  const seen=new Set(),out=[];
+  [...REMOTE_SNAPS,...local].sort((a,b)=>a.stamp.localeCompare(b.stamp)).forEach(s=>{
+    const k=s.stamp+"|"+s.scope; if(seen.has(k))return; seen.add(k); out.push(s);
+  });
+  return out;
+}
 function saveSnapshot(){
   const m=metrics();
   const openIds=scoped().filter(s=>STATE.byStation[s.id]&&STATE.byStation[s.id].status==="open").map(s=>s.id);
@@ -619,6 +635,7 @@ document.getElementById("btn_snap").addEventListener("click",saveSnapshot);
 document.getElementById("tr-clear").addEventListener("click",()=>{if(confirm("Delete all saved snapshots?")){localStorage.removeItem(SNAP_KEY);renderTrends();}});
 
 loadAll();
+loadRemoteSnaps();
 setInterval(loadAll,REFRESH_MINUTES*60*1000);
 </script>
 </body>
