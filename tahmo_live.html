@@ -11,86 +11,153 @@
 <script src="https://cdn.plot.ly/plotly-2.35.2.min.js" charset="utf-8"></script>
 <style>
   :root{
-    --canvas:#94A3B8; --panel:#1E293B; --panel2:#0F172A; --line:#334155;
-    --sky:#7DD3FC; --accent:#3B82F6;
-    --chart-bg:#334155; --chart-font:#E2E8F0; --chart-grid:#475569;
+    --bg:#F3F4F9; --surface:#FFFFFF; --surface-alt:#FAFAFD;
+    --border:#E6E8F0; --border-soft:#EEF0F7;
+    --text-900:#12142A; --text-700:#3B3E5C; --text-500:#6B6E8C; --text-400:#9497B0;
+    --sidebar-1:#171A33; --sidebar-2:#0B0D1E; --sidebar-border:#2A2D50;
+    --sidebar-text:#C9CBE6; --sidebar-text-dim:#7C7FA8;
+    --accent:#5B5FEE; --accent-2:#8B5CF6; --accent-soft:#EEF0FF; --accent-text:#4338CA;
+    --red:#EF4444; --red-soft:#FEF2F2; --red-text:#B42318; --red-border:#FCA5A5;
+    --amber:#F59E0B; --amber-soft:#FFFBEB; --amber-text:#92400E;
+    --green:#10B981; --green-soft:#ECFDF5; --green-text:#04785A;
+    --purple:#8B5CF6;
+    --shadow-sm:0 1px 2px rgba(18,20,42,.05);
+    --shadow-md:0 6px 20px rgba(18,20,42,.07),0 1px 3px rgba(18,20,42,.05);
+    --shadow-lg:0 16px 40px rgba(18,20,42,.12),0 2px 8px rgba(18,20,42,.06);
+    --r-sm:8px; --r-md:12px; --r-lg:18px;
+    --chart-bg:#FFFFFF; --chart-font:#3B3E5C; --chart-grid:#EEF0F7;
   }
   *{box-sizing:border-box}
-  html,body{margin:0;height:100%;font-family:'Inter',system-ui,Segoe UI,Roboto,Arial,sans-serif}
-  body{background:var(--canvas);color:#0F172A;display:flex;min-height:100vh}
+  html,body{margin:0;height:100%;font-family:'Inter',system-ui,Segoe UI,Roboto,Arial,sans-serif;-webkit-font-smoothing:antialiased}
+  body{
+    background:
+      radial-gradient(1200px 520px at 88% -12%, rgba(91,95,238,.10), transparent 60%),
+      radial-gradient(900px 480px at -8% 4%, rgba(139,92,246,.08), transparent 55%),
+      var(--bg);
+    color:var(--text-900);display:flex;min-height:100vh
+  }
+  ::-webkit-scrollbar{width:9px;height:9px}
+  ::-webkit-scrollbar-track{background:transparent}
+  ::-webkit-scrollbar-thumb{background:rgba(120,124,168,.35);border-radius:20px;border:2px solid transparent;background-clip:padding-box}
+  ::-webkit-scrollbar-thumb:hover{background:rgba(120,124,168,.55);background-clip:padding-box}
 
   /* ── Sidebar ── */
-  #sidebar{width:290px;flex:0 0 290px;background:linear-gradient(180deg,#1E293B 0%,#0F172A 100%);
-           color:#CBD5E1;padding:14px 14px 40px;overflow-y:auto;height:100vh;position:sticky;top:0}
-  #sidebar .brand{padding:6px 0 10px;border-bottom:1px solid #334155;margin-bottom:10px}
-  #sidebar .brand .t{font-size:1rem;font-weight:700;color:#F1F5F9}
-  #sidebar .brand .s{font-size:.7rem;color:#64748B;margin-top:2px}
-  #sidebar hr{border:none;border-top:1px solid #334155;margin:12px 0}
-  .sb-label{font-size:.7rem;font-weight:600;color:#64748B;text-transform:uppercase;letter-spacing:.07em;margin:2px 0 6px}
-  #sidebar select{width:100%;background:#1E293B;border:1px solid #334155;color:#F1F5F9;border-radius:8px;padding:7px 9px;font-family:inherit;font-size:.82rem}
-  #sidebar label{display:flex;align-items:center;gap:7px;font-size:.82rem;color:#94A3B8;padding:3px 0;cursor:pointer}
+  #sidebar{width:296px;flex:0 0 296px;background:linear-gradient(180deg,var(--sidebar-1) 0%,var(--sidebar-2) 100%);
+           color:var(--sidebar-text);padding:18px 16px 40px;overflow-y:auto;height:100vh;position:sticky;top:0;
+           border-right:1px solid var(--sidebar-border)}
+  #sidebar .brand{padding:2px 2px 16px;border-bottom:1px solid var(--sidebar-border);margin-bottom:14px}
+  .brand-row{display:flex;align-items:center;gap:10px}
+  .logo-mark{width:34px;height:34px;flex:0 0 34px;border-radius:10px;background:linear-gradient(135deg,var(--accent),var(--accent-2));
+             display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:.95rem;
+             box-shadow:0 4px 14px rgba(91,95,238,.45);letter-spacing:-.02em}
+  #sidebar .brand .t{font-size:1rem;font-weight:700;color:#F5F5FF;letter-spacing:-.01em}
+  #sidebar .brand .s{font-size:.68rem;color:var(--sidebar-text-dim);margin-top:2px}
+  #sidebar hr{border:none;border-top:1px solid var(--sidebar-border);margin:14px 0}
+  .sb-label{font-size:.66rem;font-weight:700;color:var(--sidebar-text-dim);text-transform:uppercase;letter-spacing:.09em;margin:2px 0 8px}
+  #sidebar select{width:100%;background:#12142B;border:1px solid var(--sidebar-border);color:#F1F1FA;border-radius:9px;
+                  padding:9px 10px;font-family:inherit;font-size:.82rem;cursor:pointer;transition:border-color .15s ease}
+  #sidebar select:hover,#sidebar select:focus{border-color:var(--accent);outline:none}
+  #sidebar label{display:flex;align-items:center;gap:8px;font-size:.81rem;color:var(--sidebar-text);padding:4px 2px;cursor:pointer;border-radius:6px;transition:color .15s ease}
+  #sidebar label:hover{color:#fff}
+  #sidebar input[type=checkbox]{accent-color:var(--accent);width:14px;height:14px;cursor:pointer}
   #sidebar .sub{padding-left:16px}
-  details.sb{background:#16233a;border:1px solid #334155;border-radius:8px;padding:4px 10px;margin:6px 0}
-  details.sb>summary{cursor:pointer;font-size:.82rem;color:#CBD5E1;list-style:none;padding:4px 0}
+  details.sb{background:rgba(255,255,255,.03);border:1px solid var(--sidebar-border);border-radius:10px;padding:6px 11px;margin:8px 0;transition:border-color .15s ease}
+  details.sb:hover{border-color:#3A3E68}
+  details.sb>summary{cursor:pointer;font-size:.81rem;color:var(--sidebar-text);list-style:none;padding:5px 0;font-weight:500}
   details.sb>summary::-webkit-details-marker{display:none}
-  details.sb textarea{width:100%;background:#0F172A;border:1px solid #334155;color:#CBD5E1;border-radius:6px;font-size:.72rem;padding:5px;margin:3px 0;resize:vertical;min-height:34px}
-  .sb-btn{width:100%;background:#1E293B;border:1px solid #3B82F6;color:#BAE6FD;border-radius:8px;padding:8px;font-family:inherit;font-size:.82rem;cursor:pointer;margin-top:6px}
-  .sb-btn:hover{background:#243449}
-  .sb-status{font-size:.7rem;color:#94A3B8;margin-top:8px;line-height:1.4}
+  details.sb textarea{width:100%;background:#0B0D1E;border:1px solid var(--sidebar-border);color:var(--sidebar-text);border-radius:7px;font-size:.72rem;padding:7px;margin:4px 0;resize:vertical;min-height:34px;font-family:inherit}
+  details.sb textarea:focus{outline:none;border-color:var(--accent)}
+  .sb-btn{width:100%;border:none;border-radius:9px;padding:9px;font-family:inherit;font-size:.82rem;font-weight:600;cursor:pointer;margin-top:8px;
+          transition:transform .12s ease,box-shadow .12s ease,opacity .12s ease}
+  #sidebar .sb-btn.primary{background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#fff;box-shadow:0 6px 16px rgba(91,95,238,.35)}
+  #sidebar .sb-btn.primary:hover{transform:translateY(-1px);box-shadow:0 10px 22px rgba(91,95,238,.45)}
+  #sidebar .sb-btn.secondary{background:rgba(255,255,255,.04);color:var(--sidebar-text);border:1px solid var(--sidebar-border)}
+  #sidebar .sb-btn.secondary:hover{background:rgba(255,255,255,.08);color:#fff;border-color:#3A3E68}
+  .sb-btn:active{transform:translateY(0)}
+  #main .sb-btn{background:var(--surface);border:1px solid var(--border);color:var(--text-700);box-shadow:var(--shadow-sm)}
+  #main .sb-btn:hover{background:var(--surface-alt);transform:translateY(-1px);box-shadow:var(--shadow-md)}
+  .sb-status{font-size:.7rem;color:var(--sidebar-text-dim);margin-top:10px;line-height:1.5}
   .sb-status.err{color:#FCA5A5}
-  .spin{display:inline-block;width:11px;height:11px;border:2px solid #475569;border-top-color:#7DD3FC;border-radius:50%;animation:sp .8s linear infinite;vertical-align:middle}
+  .spin{display:inline-block;width:11px;height:11px;border:2px solid #383B5F;border-top-color:#8B8FFF;border-radius:50%;animation:sp .8s linear infinite;vertical-align:middle}
   @keyframes sp{to{transform:rotate(360deg)}}
 
   /* ── Main ── */
-  #main{flex:1;min-width:0;padding:10px 16px 30px}
-  .banner{background:#7F1D1D;color:#FEE2E2;border:1px solid #EF4444;border-radius:10px;padding:12px 14px;margin-bottom:12px;font-size:.85rem;line-height:1.5;display:none}
-  .banner code{background:#450a0a;padding:1px 6px;border-radius:4px}
+  #main{flex:1;min-width:0;padding:22px 26px 40px}
+  .banner{background:var(--red-soft);color:var(--red-text);border:1px solid var(--red-border);border-radius:var(--r-md);padding:13px 16px;margin-bottom:14px;font-size:.85rem;line-height:1.55;display:none;box-shadow:var(--shadow-sm)}
+  .banner code{background:#FEE2E2;padding:1px 6px;border-radius:5px}
 
   /* ── Tabs ── */
-  .tabs{background:#0F172A;border:1px solid #3B82F6;border-radius:10px;padding:5px 6px;margin-bottom:10px;display:inline-flex;gap:6px}
-  .tabs button{background:transparent;border:none;border-radius:6px;padding:6px 18px;color:#7DD3FC;font-size:.82rem;font-weight:500;font-family:inherit;cursor:pointer}
-  .tabs button:hover{background:rgba(59,130,246,.15);color:#BAE6FD}
-  .tabs button.active{background:#3B82F6;color:#fff;font-weight:700}
+  .tabs{background:var(--surface);border:1px solid var(--border);border-radius:999px;padding:5px;margin-bottom:18px;display:inline-flex;gap:3px;box-shadow:var(--shadow-sm)}
+  .tabs button{background:transparent;border:none;border-radius:999px;padding:8px 20px;color:var(--text-500);font-size:.82rem;font-weight:600;font-family:inherit;cursor:pointer;transition:background .15s ease,color .15s ease}
+  .tabs button:hover{background:var(--accent-soft);color:var(--accent-text)}
+  .tabs button.active{background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#fff;box-shadow:0 4px 12px rgba(91,95,238,.35)}
 
   /* ── Page header + pills ── */
-  .page-header{display:flex;align-items:center;justify-content:space-between;padding:6px 0 8px;margin-bottom:8px;border-bottom:1px solid #334155}
-  .page-header .country{font-size:1.1rem;font-weight:700;color:#0F172A;letter-spacing:-.02em}
-  .page-header .sub{font-size:.72rem;color:#334155}
-  .metric-strip{display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap}
-  .metric-pill{background:#1E293B;border:1px solid #334155;border-radius:10px;padding:10px 14px;min-width:120px;flex:1}
-  .metric-pill .l{font-size:.65rem;font-weight:600;color:#94A3B8;text-transform:uppercase;letter-spacing:.07em;margin-bottom:3px}
-  .metric-pill .v{font-size:1.5rem;font-weight:700;line-height:1.1}
-  .metric-pill .s{font-size:.65rem;color:#64748B;margin-top:2px}
+  .page-header{display:flex;align-items:center;justify-content:space-between;padding:2px 0 16px;margin-bottom:6px}
+  .page-header .country{font-size:1.5rem;font-weight:800;color:var(--text-900);letter-spacing:-.03em}
+  .page-header .sub{font-size:.78rem;color:var(--text-500);margin-top:3px}
+  .metric-strip{display:flex;gap:12px;margin-bottom:18px;flex-wrap:wrap}
+  .metric-pill{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:14px 18px;min-width:130px;flex:1;
+              box-shadow:var(--shadow-sm);transition:transform .15s ease,box-shadow .15s ease}
+  .metric-pill:hover{transform:translateY(-2px);box-shadow:var(--shadow-md)}
+  .metric-pill .l{font-size:.64rem;font-weight:700;color:var(--text-400);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px}
+  .metric-pill .v{font-size:1.7rem;font-weight:800;line-height:1.1;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+  .metric-pill .s{font-size:.68rem;color:var(--text-400);margin-top:4px}
 
-  .section-label{font-size:.68rem;font-weight:700;color:#1E3A8A;text-transform:uppercase;letter-spacing:.09em;margin:12px 0 6px;border-left:3px solid #3B82F6;padding-left:6px}
-  .info-panel{background:#1E293B;border:1px solid #334155;border-radius:8px;padding:8px 14px;font-size:.82rem;color:#CBD5E1;margin-bottom:8px}
-  .info-panel strong{color:#7DD3FC}
-  .map-wrap{border-radius:12px;overflow:hidden;border:1px solid #334155;box-shadow:0 2px 12px rgba(0,0,0,.3)}
+  .section-label{font-size:.68rem;font-weight:700;color:var(--accent-text);text-transform:uppercase;letter-spacing:.09em;margin:18px 0 8px;border-left:3px solid var(--accent);padding-left:8px}
+  .info-panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-md);padding:11px 16px;font-size:.83rem;color:var(--text-700);margin-bottom:10px;box-shadow:var(--shadow-sm)}
+  .info-panel strong{color:var(--accent-text)}
+  .map-wrap{border-radius:var(--r-lg);overflow:hidden;border:1px solid var(--border);box-shadow:var(--shadow-lg)}
   #map,#arcmap{height:680px}
   #arcmap{height:560px}
-  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
   @media(max-width:1000px){.grid2{grid-template-columns:1fr}}
-  .card{background:#1E293B;border:1px solid #334155;border-radius:8px;padding:8px}
-  details.dd{background:#1E293B;border:1px solid #334155;border-radius:8px;padding:4px 10px;margin:6px 0}
-  details.dd>summary{cursor:pointer;color:#CBD5E1;font-size:.84rem;padding:4px 0;list-style:none}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:14px;box-shadow:var(--shadow-sm)}
+  details.dd{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-md);padding:6px 14px;margin:8px 0;box-shadow:var(--shadow-sm);transition:border-color .15s ease}
+  details.dd:hover{border-color:#D6D9EE}
+  details.dd>summary{cursor:pointer;color:var(--text-700);font-size:.84rem;font-weight:600;padding:6px 0;list-style:none}
   details.dd>summary::-webkit-details-marker{display:none}
-  details.dd code{display:block;background:#0F172A;color:#7DD3FC;border-radius:6px;font-size:.75rem;padding:6px;margin:4px 0;white-space:pre-wrap;word-break:break-word}
-  table.tbl{width:100%;border-collapse:collapse;font-size:.76rem}
-  table.tbl th,table.tbl td{text-align:left;padding:5px 6px;border-bottom:1px solid #26334a;color:#CBD5E1}
-  table.tbl th{color:#94A3B8;font-weight:600}
-  .leaflet-popup-content .pk{color:#64748B;font-weight:500}
-  .leaflet-popup-content .pv{color:#0F172A;font-weight:600;text-align:right}
+  details.dd code{display:block;background:var(--surface-alt);color:var(--accent-text);border:1px solid var(--border-soft);border-radius:8px;font-size:.75rem;padding:8px 10px;margin:4px 0 8px;white-space:pre-wrap;word-break:break-word}
+  table.tbl{width:100%;border-collapse:collapse;font-size:.78rem}
+  table.tbl th,table.tbl td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--border-soft);color:var(--text-700)}
+  table.tbl th{color:var(--text-400);font-weight:700;text-transform:uppercase;font-size:.66rem;letter-spacing:.06em}
+  table.tbl tbody tr{transition:background .12s ease}
+  table.tbl tbody tr:hover{background:var(--accent-soft)}
+  .leaflet-popup-content-wrapper{border-radius:12px;box-shadow:var(--shadow-lg);border:1px solid var(--border)}
+  .leaflet-popup-content .pk{color:var(--text-500);font-weight:500}
+  .leaflet-popup-content .pv{color:var(--text-900);font-weight:600;text-align:right}
   .hide{display:none}
-  .metric-mini{display:flex;gap:10px;flex-wrap:wrap;margin:6px 0}
-  .metric-mini .m{background:#1E293B;border:1px solid #334155;border-radius:8px;padding:8px 12px;flex:1;min-width:120px}
-  .metric-mini .m .l{font-size:.62rem;color:#94A3B8;text-transform:uppercase;letter-spacing:.06em}
-  .metric-mini .m .v{font-size:1.3rem;font-weight:700}
+  .metric-mini{display:flex;gap:12px;flex-wrap:wrap;margin:8px 0}
+  .metric-mini .m{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-md);padding:10px 14px;flex:1;min-width:120px;box-shadow:var(--shadow-sm)}
+  .metric-mini .m .l{font-size:.62rem;color:var(--text-400);text-transform:uppercase;letter-spacing:.06em;font-weight:700}
+  .metric-mini .m .v{font-size:1.35rem;font-weight:800;letter-spacing:-.01em}
+
+  /* ── Tab transitions ── */
+  @keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+  #main>section{animation:fadeIn .3s ease}
+
+  /* ── Empty state ── */
+  #tr-empty{text-align:center;padding:40px 24px;border:1.5px dashed var(--border);background:var(--surface-alt);box-shadow:none;font-size:.86rem;line-height:1.7;max-width:520px;margin:24px auto}
+
+  /* ── Popup links ── */
+  .leaflet-popup-content a{color:var(--accent-text);font-weight:600;text-decoration:none}
+  .leaflet-popup-content a:hover{text-decoration:underline}
+
+  /* ── Sticky table headers ── */
+  table.tbl thead th{position:sticky;top:0;background:var(--surface);z-index:1}
+
+  /* ── Leaflet control polish ── */
+  .leaflet-control-zoom{border:1px solid var(--border)!important;border-radius:var(--r-sm)!important;overflow:hidden;box-shadow:var(--shadow-md)!important}
+  .leaflet-control-zoom a{background:var(--surface)!important;color:var(--text-700)!important;transition:background .12s ease}
+  .leaflet-control-zoom a:hover{background:var(--accent-soft)!important;color:var(--accent-text)!important}
+  .leaflet-control-attribution{background:rgba(255,255,255,.85)!important;color:var(--text-400)!important;border-radius:6px 0 0 0!important;font-size:.68rem!important}
+  .leaflet-control-attribution a{color:var(--text-500)!important}
 </style>
 </head>
 <body>
 
 <div id="sidebar">
-  <div class="brand"><div class="t">🌦️ TAHMO Portal</div><div class="s">Live Network Operations · API-driven</div></div>
+  <div class="brand"><div class="brand-row"><div class="logo-mark">T</div><div><div class="t">TAHMO Portal</div><div class="s">Live Network Operations · API-driven</div></div></div></div>
 
   <div class="sb-label">🗺️ Network Scope</div>
   <select id="scope"><option value="__ALL__">🌍 Pan-Africa (All Countries)</option></select>
@@ -129,12 +196,12 @@
     <textarea id="hl2" placeholder="Blue: TA00125"></textarea>
     <textarea id="hl3" placeholder="Green: TA00126"></textarea>
     <textarea id="hl4" placeholder="Orange: TA00127"></textarea>
-    <button class="sb-btn" id="hl_apply">Apply highlights</button>
+    <button class="sb-btn secondary" id="hl_apply">Apply highlights</button>
   </details>
 
   <hr>
-  <button class="sb-btn" id="btn_refresh">🔄 Refresh data</button>
-  <button class="sb-btn" id="btn_snap">📸 Save snapshot</button>
+  <button class="sb-btn primary" id="btn_refresh">🔄 Refresh data</button>
+  <button class="sb-btn secondary" id="btn_snap">📸 Save snapshot</button>
   <div class="sb-status" id="status"><span class="spin"></span> loading…</div>
 </div>
 
@@ -160,10 +227,13 @@
 
   <!-- ARCUS TAB -->
   <section id="tab-arcus" class="hide">
-    <div class="section-label">📡 ARCUS Stations — Isolated Asset View</div>
+    <div class="page-header">
+      <div><div class="country">ARCUS · Isolated Asset View</div>
+      <div class="sub">Dedicated map and register for ARCUS-tagged stations</div></div>
+    </div>
     <div class="grid2">
       <div class="map-wrap"><div id="arcmap"></div></div>
-      <div class="card"><div class="section-label" style="color:#7DD3FC">Asset Register</div>
+      <div class="card"><div class="section-label" style="margin-top:0">Asset Register</div>
         <div style="max-height:520px;overflow:auto">
           <table class="tbl" id="arctable"><thead><tr><th>Station</th><th>Site</th><th>Country</th></tr></thead><tbody></tbody></table>
         </div>
@@ -208,7 +278,7 @@
         <details class="dd" open><summary id="tr-new-sum">🆕 Newly faulted</summary><code id="tr-new"></code></details>
         <details class="dd" open><summary id="tr-res-sum">✅ Resolved</summary><code id="tr-res"></code></details>
       </div>
-      <button class="sb-btn" id="tr-clear" style="max-width:220px;border-color:#7F1D1D;color:#FCA5A5">🗑️ Clear all snapshots</button>
+      <button class="sb-btn secondary" id="tr-clear" style="max-width:220px;border-color:var(--red-border);color:var(--red-text)">🗑️ Clear all snapshots</button>
     </div>
   </section>
 </div>
@@ -225,8 +295,8 @@ const PENDING_URL  = API_BASE + "/api/pending";
 const STATIONS_URL = API_BASE + "/api/stations";
 
 const COUNTRY_NAMES = {KE:"Kenya",UG:"Uganda",TZ:"Tanzania",RW:"Rwanda",BI:"Burundi",ET:"Ethiopia",SO:"Somalia",SS:"South Sudan",SD:"Sudan",GH:"Ghana",NG:"Nigeria",BJ:"Benin",TG:"Togo",CI:"Cote d'Ivoire",ML:"Mali",BF:"Burkina Faso",NE:"Niger",SN:"Senegal",CM:"Cameroon",CF:"Central African Republic",CD:"DR Congo",CG:"Congo",GA:"Gabon",MW:"Malawi",ZM:"Zambia",ZW:"Zimbabwe",MZ:"Mozambique",ZA:"South Africa",MG:"Madagascar",AO:"Angola",NA:"Namibia",BW:"Botswana",LS:"Lesotho",SZ:"Eswatini",GM:"Gambia",GN:"Guinea",SL:"Sierra Leone",LR:"Liberia",GW:"Guinea-Bissau",TD:"Chad",US:"United States",DE:"Germany",NL:"Netherlands",BE:"Belgium",CH:"Switzerland",CR:"Costa Rica"};
-const SAFE = ['#88CCEE','#CC6677','#DDCC77','#117733','#332288','#AA4499','#44AA99','#999933','#882255','#661100','#6699CC','#888888'];
-const CHART_BG="#334155", CHART_FONT="#E2E8F0", CHART_GRID="#475569";
+const SAFE = ['#5B5FEE','#EC4899','#10B981','#F59E0B','#0EA5E9','#8B5CF6','#F97316','#14B8A6','#EF4444','#64748B','#84CC16','#D946EF'];
+const CHART_BG="#FFFFFF", CHART_FONT="#3B3E5C", CHART_GRID="#EEF0F7";
 const cname = c => COUNTRY_NAMES[c] || c || "Unknown";
 const esc = s => String(s==null?"":s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
@@ -332,12 +402,12 @@ function renderPills(){
   document.getElementById("hdr-country").textContent=scopeName()+" · Network Overview";
   document.getElementById("hdr-sub").textContent="TAHMO Live Ticket Dashboard · updated "+new Date().toLocaleTimeString();
   document.getElementById("pills").innerHTML=[
-    pill("Total Stations",m.total,"","#7DD3FC"),
-    pill("🔴 Open Tickets",m.openSites,m.openTk+" ticket(s)","#F87171"),
-    pill("🟡 Pending",m.pendSites,m.pendTk+" ticket(s)","#FCD34D"),
-    pill("🟢 No Tickets",m.noTk,"stations clear","#4ADE80"),
-    pill("⚡ ARCUS Faults",m.arcFault,"","#C084FC"),
-    pill("✅ Health",m.health+"%","","#4ADE80"),
+    pill("Total Stations",m.total,"","#5B5FEE"),
+    pill("🔴 Open Tickets",m.openSites,m.openTk+" ticket(s)","#DC2626"),
+    pill("🟡 Pending",m.pendSites,m.pendTk+" ticket(s)","#B45309"),
+    pill("🟢 No Tickets",m.noTk,"stations clear","#04785A"),
+    pill("⚡ ARCUS Faults",m.arcFault,"","#7C3AED"),
+    pill("✅ Health",m.health+"%","","#04785A"),
   ].join("");
 }
 
@@ -358,7 +428,7 @@ function popup(s,b){
     rows.push(["Ticket Issue",t.title||"N/A"],["Issue Category",(t.labels||[]).join(", ")||"N/A"],
       ["Assigned To",(t.assignee||{}).full_name||"N/A"],
       ["Ticket Opened",t.created_at?new Date(t.created_at).toLocaleDateString():"N/A"]);
-    if(t.ticket_id)rows.push(["Ticket",`<a href="https://tickets.tahmo.org/issues/${t.ticket_id}" target="_blank">Open ↗</a>`]);
+    if(t._id)rows.push(["Ticket",`#${esc(t.ticket_id||"")} — <a href="https://tickets.tahmo.org/#/issues/view/${t._id}" target="_blank">Open ↗</a>`]);
     title=b.status==="open"?"🔴 Active Fault":"🟡 Pending Fix";
   }else title=s.active?"🟢 Active Station":"⚫ Inactive";
   return `<div style="min-width:230px"><b>${title}: ${esc(s.name||s.id)}</b><table style="width:100%;margin-top:6px">`+
@@ -384,24 +454,24 @@ function renderMap(){
     }
     const b=STATE.byStation[s.id], hasOpen=b&&b.status==="open", hasPend=b&&b.status==="pending";
     const html=popup(s,b);
-    // Layer 1: base black dot
-    if(chk("l_base"))L.circleMarker([lat,lon],{radius:3.5,color:"#000",weight:0,fillColor:"#000",fillOpacity:1}).bindPopup(html).addTo(layer);
+    // Layer 1: base dot
+    if(chk("l_base"))L.circleMarker([lat,lon],{radius:3.5,color:"#12142A",weight:0,fillColor:"#12142A",fillOpacity:1}).bindPopup(html).addTo(layer);
     // Layer 2: ticket overlay
     if(chk("tk_overlay")){
-      if(hasOpen&&chk("tk_open"))L.circleMarker([lat,lon],{radius:6.5,color:"#7F1D1D",weight:1.5,fillColor:"#EF4444",fillOpacity:.9}).bindPopup(html).addTo(layer);
-      else if(hasPend&&chk("tk_pend"))L.circleMarker([lat,lon],{radius:6.5,color:"#78350F",weight:1.5,fillColor:"#F59E0B",fillOpacity:.9}).bindPopup(html).addTo(layer);
-      else if(!hasOpen&&!hasPend&&chk("tk_heal"))L.circleMarker([lat,lon],{radius:6.5,color:"#064E3B",weight:1.5,fillColor:"#10B981",fillOpacity:.9}).bindPopup(html).addTo(layer);
+      if(hasOpen&&chk("tk_open"))L.circleMarker([lat,lon],{radius:6.5,color:"#B42318",weight:1.5,fillColor:"#EF4444",fillOpacity:.9}).bindPopup(html).addTo(layer);
+      else if(hasPend&&chk("tk_pend"))L.circleMarker([lat,lon],{radius:6.5,color:"#92400E",weight:1.5,fillColor:"#F59E0B",fillOpacity:.9}).bindPopup(html).addTo(layer);
+      else if(!hasOpen&&!hasPend&&chk("tk_heal"))L.circleMarker([lat,lon],{radius:6.5,color:"#04785A",weight:1.5,fillColor:"#10B981",fillOpacity:.9}).bindPopup(html).addTo(layer);
     }
     // Layer 3: hardware rings
-    if(chk("hw_meter")&&k.meter)ring(lat,lon,9,"#1E3A8A");
-    if(chk("hw_camp")&&k.camp)ring(lat,lon,9,"#2563EB");
+    if(chk("hw_meter")&&k.meter)ring(lat,lon,9,"#5B5FEE");
+    if(chk("hw_camp")&&k.camp)ring(lat,lon,9,"#0EA5E9");
     if(chk("hw_eco")&&k.eco)ring(lat,lon,9,"#10B981");
     if(chk("hw_hydro")&&k.hydro)ring(lat,lon,9,"#F59E0B");
     if(chk("hw_other")&&k.other)ring(lat,lon,9,"#64748B");
     // Layer 4: ARCUS rings
     if(chk("arc_master")&&arc){
-      if(chk("arc_ta")&&sid.startsWith("TA"))ring(lat,lon,13,"#6D28D9",2.5,html);
-      if(chk("arc_te")&&sid.startsWith("TE"))ring(lat,lon,13,"#DB2777",2.5,html);
+      if(chk("arc_ta")&&sid.startsWith("TA"))ring(lat,lon,13,"#8B5CF6",2.5,html);
+      if(chk("arc_te")&&sid.startsWith("TE"))ring(lat,lon,13,"#EC4899",2.5,html);
     }
     // Layer 5: highlights
     if(HL[1].has(sid))ring(lat,lon,9,"#EF4444");
@@ -426,11 +496,11 @@ function renderArcus(){
   list.forEach(s=>{
     rows.push(`<tr><td>${esc(s.id)}</td><td>${esc(s.name)}</td><td>${esc(cname(s.country_code))}</td></tr>`);
     if(s.latitude==null||s.longitude==null)return;
-    const color=(s.id||"").toUpperCase().startsWith("TA")?"#6366F1":"#EC4899";
+    const color=(s.id||"").toUpperCase().startsWith("TA")?"#8B5CF6":"#EC4899";
     L.circleMarker([s.latitude,s.longitude],{radius:6,color:color,fillColor:color,fillOpacity:.7,weight:1}).bindPopup(popup(s,STATE.byStation[s.id])).addTo(arclayer);
     pts.push([s.latitude,s.longitude]);
   });
-  document.querySelector("#arctable tbody").innerHTML=rows.join("")||'<tr><td colspan="3" style="color:#64748B">No ARCUS stations in scope</td></tr>';
+  document.querySelector("#arctable tbody").innerHTML=rows.join("")||'<tr><td colspan="3" style="color:var(--text-400)">No ARCUS stations in scope</td></tr>';
   if(pts.length&&arcFirstFit!==scopeVal()){try{arcmap.fitBounds(pts,{padding:[30,30],maxZoom:7});}catch(e){}arcFirstFit=scopeVal();}
   setTimeout(()=>arcmap.invalidateSize(),50);
 }
@@ -440,10 +510,10 @@ function renderAnalytics(){
   const m=metrics();
   document.getElementById("an-country").textContent=scopeName()+" · Workspace Insights";
   document.getElementById("an-pills").innerHTML=[
-    pill("Total Nodes",m.total,"","#94A3B8"),
+    pill("Total Nodes",m.total,"","#6B6E8C"),
     pill("Affected Sites",m.openSites+m.pendSites,`🔴 ${m.openSites} open · 🟡 ${m.pendSites} pending`,"#EA580C"),
-    pill("ARCUS Faults",m.arcFault,"","#DC2626"),
-    pill("✅ Stability",m.health+"%","","#16A34A"),
+    pill("ARCUS Faults",m.arcFault,"","#7C3AED"),
+    pill("✅ Stability",m.health+"%","","#04785A"),
   ].join("");
   const ids=new Set(scoped().map(s=>s.id));
   const pool=STATE.open.filter(t=>ids.has(t.station)).concat(STATE.pending.filter(t=>ids.has(t.station)));
@@ -463,7 +533,7 @@ function renderAnalytics(){
     {title:{text:"Incident Category Spread",font:{color:CHART_FONT}},paper_bgcolor:CHART_BG,plot_bgcolor:CHART_BG,font:{color:CHART_FONT},legend:{font:{color:CHART_FONT}},margin:{t:44,b:20,l:20,r:20}},{displayModeBar:false,responsive:true});
   // Bar
   const iss=Object.keys(issC).sort((a,b)=>issC[b]-issC[a]);
-  Plotly.react("bar",[{type:"bar",x:iss,y:iss.map(i=>issC[i]),marker:{color:"#3B82F6"}}],
+  Plotly.react("bar",[{type:"bar",x:iss,y:iss.map(i=>issC[i]),marker:{color:"#5B5FEE"}}],
     {title:{text:"Specific Fault Breakdown",font:{color:CHART_FONT}},paper_bgcolor:CHART_BG,plot_bgcolor:CHART_BG,font:{color:CHART_FONT},margin:{t:44,b:90,l:40,r:20},xaxis:{tickangle:-30,color:CHART_FONT,gridcolor:CHART_GRID},yaxis:{color:CHART_FONT,gridcolor:CHART_GRID}},{displayModeBar:false,responsive:true});
   // Drilldowns
   const dd=(obj,stObj)=>Object.keys(obj).sort().map(k=>{
@@ -506,7 +576,7 @@ function renderTrends(){
     const a=snaps[snaps.length-2],b=snaps[snaps.length-1];
     const prev=new Set(a.openIds||[]),curr=new Set(b.openIds||[]);
     const nw=[...curr].filter(x=>!prev.has(x)),rs=[...prev].filter(x=>!curr.has(x)),ps=[...curr].filter(x=>prev.has(x));
-    dEl.innerHTML=[["🆕 Newly faulted",nw.length,"#F87171"],["✅ Resolved",rs.length,"#4ADE80"],["⏳ Still faulted",ps.length,"#FCD34D"]]
+    dEl.innerHTML=[["🆕 Newly faulted",nw.length,"#DC2626"],["✅ Resolved",rs.length,"#04785A"],["⏳ Still faulted",ps.length,"#B45309"]]
       .map(([l,v,c])=>`<div class="m"><div class="l">${l}</div><div class="v" style="color:${c}">${v}</div></div>`).join("");
     document.getElementById("tr-new-sum").textContent=`🆕 Newly faulted (${nw.length})`;
     document.getElementById("tr-res-sum").textContent=`✅ Resolved (${rs.length})`;
