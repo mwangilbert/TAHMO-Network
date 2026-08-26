@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>TAHMO Network Portal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js" charset="utf-8"></script>
+<style>
+  :root{
+    --canvas:#94A3B8; --panel:#1E293B; --panel2:#0F172A; --line:#334155;
+    --sky:#7DD3FC; --accent:#3B82F6;
+    --chart-bg:#334155; --chart-font:#E2E8F0; --chart-grid:#475569;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;font-family:'Inter',system-ui,Segoe UI,Roboto,Arial,sans-serif}
+  body{background:var(--canvas);color:#0F172A;display:flex;min-height:100vh}
+
+  /* ── Sidebar ── */
+  #sidebar{width:290px;flex:0 0 290px;background:linear-gradient(180deg,#1E293B 0%,#0F172A 100%);
+           color:#CBD5E1;padding:14px 14px 40px;overflow-y:auto;height:100vh;position:sticky;top:0}
+  #sidebar .brand{padding:6px 0 10px;border-bottom:1px solid #334155;margin-bottom:10px}
+  #sidebar .brand .t{font-size:1rem;font-weight:700;color:#F1F5F9}
+  #sidebar .brand .s{font-size:.7rem;color:#64748B;margin-top:2px}
+  #sidebar hr{border:none;border-top:1px solid #334155;margin:12px 0}
+  .sb-label{font-size:.7rem;font-weight:600;color:#64748B;text-transform:uppercase;letter-spacing:.07em;margin:2px 0 6px}
+  #sidebar select{width:100%;background:#1E293B;border:1px solid #334155;color:#F1F5F9;border-radius:8px;padding:7px 9px;font-family:inherit;font-size:.82rem}
+  #sidebar label{display:flex;align-items:center;gap:7px;font-size:.82rem;color:#94A3B8;padding:3px 0;cursor:pointer}
+  #sidebar .sub{padding-left:16px}
+  details.sb{background:#16233a;border:1px solid #334155;border-radius:8px;padding:4px 10px;margin:6px 0}
+  details.sb>summary{cursor:pointer;font-size:.82rem;color:#CBD5E1;list-style:none;padding:4px 0}
+  details.sb>summary::-webkit-details-marker{display:none}
+  details.sb textarea{width:100%;background:#0F172A;border:1px solid #334155;color:#CBD5E1;border-radius:6px;font-size:.72rem;padding:5px;margin:3px 0;resize:vertical;min-height:34px}
+  .sb-btn{width:100%;background:#1E293B;border:1px solid #3B82F6;color:#BAE6FD;border-radius:8px;padding:8px;font-family:inherit;font-size:.82rem;cursor:pointer;margin-top:6px}
+  .sb-btn:hover{background:#243449}
+  .sb-status{font-size:.7rem;color:#94A3B8;margin-top:8px;line-height:1.4}
+  .sb-status.err{color:#FCA5A5}
+  .spin{display:inline-block;width:11px;height:11px;border:2px solid #475569;border-top-color:#7DD3FC;border-radius:50%;animation:sp .8s linear infinite;vertical-align:middle}
+  @keyframes sp{to{transform:rotate(360deg)}}
+
+  /* ── Main ── */
+  #main{flex:1;min-width:0;padding:10px 16px 30px}
+  .banner{background:#7F1D1D;color:#FEE2E2;border:1px solid #EF4444;border-radius:10px;padding:12px 14px;margin-bottom:12px;font-size:.85rem;line-height:1.5;display:none}
+  .banner code{background:#450a0a;padding:1px 6px;border-radius:4px}
+
+  /* ── Tabs ── */
+  .tabs{background:#0F172A;border:1px solid #3B82F6;border-radius:10px;padding:5px 6px;margin-bottom:10px;display:inline-flex;gap:6px}
+  .tabs button{background:transparent;border:none;border-radius:6px;padding:6px 18px;color:#7DD3FC;font-size:.82rem;font-weight:500;font-family:inherit;cursor:pointer}
+  .tabs button:hover{background:rgba(59,130,246,.15);color:#BAE6FD}
+  .tabs button.active{background:#3B82F6;color:#fff;font-weight:700}
+
+  /* ── Page header + pills ── */
+  .page-header{display:flex;align-items:center;justify-content:space-between;padding:6px 0 8px;margin-bottom:8px;border-bottom:1px solid #334155}
+  .page-header .country{font-size:1.1rem;font-weight:700;color:#0F172A;letter-spacing:-.02em}
+  .page-header .sub{font-size:.72rem;color:#334155}
+  .metric-strip{display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap}
+  .metric-pill{background:#1E293B;border:1px solid #334155;border-radius:10px;padding:10px 14px;min-width:120px;flex:1}
+  .metric-pill .l{font-size:.65rem;font-weight:600;color:#94A3B8;text-transform:uppercase;letter-spacing:.07em;margin-bottom:3px}
+  .metric-pill .v{font-size:1.5rem;font-weight:700;line-height:1.1}
+  .metric-pill .s{font-size:.65rem;color:#64748B;margin-top:2px}
+
+  .section-label{font-size:.68rem;font-weight:700;color:#1E3A8A;text-transform:uppercase;letter-spacing:.09em;margin:12px 0 6px;border-left:3px solid #3B82F6;padding-left:6px}
+  .info-panel{background:#1E293B;border:1px solid #334155;border-radius:8px;padding:8px 14px;font-size:.82rem;color:#CBD5E1;margin-bottom:8px}
+  .info-panel strong{color:#7DD3FC}
+  .map-wrap{border-radius:12px;overflow:hidden;border:1px solid #334155;box-shadow:0 2px 12px rgba(0,0,0,.3)}
+  #map,#arcmap{height:680px}
+  #arcmap{height:560px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media(max-width:1000px){.grid2{grid-template-columns:1fr}}
+  .card{background:#1E293B;border:1px solid #334155;border-radius:8px;padding:8px}
+  details.dd{background:#1E293B;border:1px solid #334155;border-radius:8px;padding:4px 10px;margin:6px 0}
+  details.dd>summary{cursor:pointer;color:#CBD5E1;font-size:.84rem;padding:4px 0;list-style:none}
+  details.dd>summary::-webkit-details-marker{display:none}
+  details.dd code{display:block;background:#0F172A;color:#7DD3FC;border-radius:6px;font-size:.75rem;padding:6px;margin:4px 0;white-space:pre-wrap;word-break:break-word}
+  table.tbl{width:100%;border-collapse:collapse;font-size:.76rem}
+  table.tbl th,table.tbl td{text-align:left;padding:5px 6px;border-bottom:1px solid #26334a;color:#CBD5E1}
+  table.tbl th{color:#94A3B8;font-weight:600}
+  .leaflet-popup-content .pk{color:#64748B;font-weight:500}
+  .leaflet-popup-content .pv{color:#0F172A;font-weight:600;text-align:right}
+  .hide{display:none}
+  .metric-mini{display:flex;gap:10px;flex-wrap:wrap;margin:6px 0}
+  .metric-mini .m{background:#1E293B;border:1px solid #334155;border-radius:8px;padding:8px 12px;flex:1;min-width:120px}
+  .metric-mini .m .l{font-size:.62rem;color:#94A3B8;text-transform:uppercase;letter-spacing:.06em}
+  .metric-mini .m .v{font-size:1.3rem;font-weight:700}
+</style>
+</head>
+<body>
+
+<div id="sidebar">
+  <div class="brand"><div class="t">🌦️ TAHMO Portal</div><div class="s">Live Network Operations · API-driven</div></div>
+
+  <div class="sb-label">🗺️ Network Scope</div>
+  <select id="scope"><option value="__ALL__">🌍 Pan-Africa (All Countries)</option></select>
+
+  <hr>
+  <div class="sb-label">Map Layers</div>
+  <label><input type="checkbox" id="l_base" checked> ⚫ Base Stations (<span id="c_base">0</span>)</label>
+
+  <details class="sb"><summary>🖥️ Hardware Categories</summary>
+    <label><input type="checkbox" id="hw_meter"> 1. METER (<span id="c_meter">0</span>)</label>
+    <label><input type="checkbox" id="hw_camp"> 2. Campbell (<span id="c_camp">0</span>)</label>
+    <label><input type="checkbox" id="hw_eco"> 3. Ecowit (<span id="c_eco">0</span>)</label>
+    <label><input type="checkbox" id="hw_hydro"> 4. Hydro (<span id="c_hydro">0</span>)</label>
+    <label><input type="checkbox" id="hw_other"> 5. Others (<span id="c_other">0</span>)</label>
+  </details>
+
+  <hr>
+  <div class="sb-label">ARCUS Subcategory</div>
+  <label><input type="checkbox" id="arc_master"> ARCUS Only (<span id="c_arc">0</span>)</label>
+  <div class="sub" id="arc_subs" style="display:none">
+    <label><input type="checkbox" id="arc_ta" checked> METER Setup</label>
+    <label><input type="checkbox" id="arc_te" checked> Ecowit Setup</label>
+  </div>
+
+  <hr>
+  <div class="sb-label">Ticket Status Layer</div>
+  <label><input type="checkbox" id="tk_overlay" checked> Ticket Markers Overlay</label>
+  <div class="sub" id="tk_subs">
+    <label><input type="checkbox" id="tk_open" checked> 🔴 Open tickets (<span id="c_open">0</span>)</label>
+    <label><input type="checkbox" id="tk_pend" checked> 🟡 Pending tickets (<span id="c_pend">0</span>)</label>
+    <label><input type="checkbox" id="tk_heal" checked> 🟢 Stations without tickets (<span id="c_heal">0</span>)</label>
+  </div>
+
+  <details class="sb"><summary>🎯 Target Highlights Overlay</summary>
+    <textarea id="hl1" placeholder="Red dot: TA00123, TA00124"></textarea>
+    <textarea id="hl2" placeholder="Blue: TA00125"></textarea>
+    <textarea id="hl3" placeholder="Green: TA00126"></textarea>
+    <textarea id="hl4" placeholder="Orange: TA00127"></textarea>
+    <button class="sb-btn" id="hl_apply">Apply highlights</button>
+  </details>
+
+  <hr>
+  <button class="sb-btn" id="btn_refresh">🔄 Refresh data</button>
+  <button class="sb-btn" id="btn_snap">📸 Save snapshot</button>
+  <div class="sb-status" id="status"><span class="spin"></span> loading…</div>
+</div>
+
+<div id="main">
+  <div class="banner" id="banner"></div>
+
+  <div class="tabs">
+    <button data-tab="map" class="active">🗺️ Map</button>
+    <button data-tab="arcus">📡 ARCUS</button>
+    <button data-tab="analytics">📊 Analytics</button>
+    <button data-tab="trends">📈 Trends</button>
+  </div>
+
+  <!-- MAP TAB -->
+  <section id="tab-map">
+    <div class="page-header">
+      <div><div class="country" id="hdr-country">Pan-Africa · Network Overview</div>
+      <div class="sub" id="hdr-sub">TAHMO Live Ticket Dashboard</div></div>
+    </div>
+    <div class="metric-strip" id="pills"></div>
+    <div class="map-wrap"><div id="map"></div></div>
+  </section>
+
+  <!-- ARCUS TAB -->
+  <section id="tab-arcus" class="hide">
+    <div class="section-label">📡 ARCUS Stations — Isolated Asset View</div>
+    <div class="grid2">
+      <div class="map-wrap"><div id="arcmap"></div></div>
+      <div class="card"><div class="section-label" style="color:#7DD3FC">Asset Register</div>
+        <div style="max-height:520px;overflow:auto">
+          <table class="tbl" id="arctable"><thead><tr><th>Station</th><th>Site</th><th>Country</th></tr></thead><tbody></tbody></table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ANALYTICS TAB -->
+  <section id="tab-analytics" class="hide">
+    <div class="page-header">
+      <div><div class="country" id="an-country">Pan-Africa · Workspace Insights</div>
+      <div class="sub">Ticket diagnostics and fault drill-down</div></div>
+    </div>
+    <div class="metric-strip" id="an-pills"></div>
+    <div class="section-label">Fault Distribution</div>
+    <div class="grid2">
+      <div class="card"><div id="pie" style="height:340px"></div></div>
+      <div class="card"><div id="bar" style="height:340px"></div></div>
+    </div>
+    <div class="section-label">Ticket Registry Drill-Down</div>
+    <div class="info-panel" id="an-info">—</div>
+    <div class="grid2">
+      <div><div class="section-label">By Incident Category</div><div id="dd-cat"></div></div>
+      <div><div class="section-label">By Fault Type</div><div id="dd-issue"></div></div>
+    </div>
+  </section>
+
+  <!-- TRENDS TAB -->
+  <section id="tab-trends" class="hide">
+    <div class="page-header">
+      <div><div class="country" id="tr-country">Pan-Africa · Trends &amp; Change Detection</div>
+      <div class="sub">Snapshots are saved in this browser · click “Save snapshot” to add one</div></div>
+    </div>
+    <div id="tr-empty" class="info-panel">No snapshots yet. Click <strong>📸 Save snapshot</strong> (sidebar) to store the current state. Save one weekly (or daily); with two or more you’ll see change over time here.</div>
+    <div id="tr-content" class="hide">
+      <div class="section-label">Network Health Over Time</div>
+      <div class="card"><div id="tr-line" style="height:300px"></div></div>
+      <div class="card" style="margin-top:12px"><div id="tr-health" style="height:260px"></div></div>
+      <div class="section-label">Change Since Previous Snapshot</div>
+      <div class="metric-mini" id="tr-delta"></div>
+      <div class="grid2">
+        <details class="dd" open><summary id="tr-new-sum">🆕 Newly faulted</summary><code id="tr-new"></code></details>
+        <details class="dd" open><summary id="tr-res-sum">✅ Resolved</summary><code id="tr-res"></code></details>
+      </div>
+      <button class="sb-btn" id="tr-clear" style="max-width:220px;border-color:#7F1D1D;color:#FCA5A5">🗑️ Clear all snapshots</button>
+    </div>
+  </section>
+</div>
+
+<script>
+/* ============================ CONFIG ============================ */
+const PORT = 8000;
+// Same-origin when served by the proxy; if the file is opened directly (file://)
+// fall back to the local proxy on localhost so it still works when the server runs.
+const API_BASE = (location.protocol === "file:") ? ("http://localhost:" + PORT) : "";
+const REFRESH_MINUTES = 10;
+const OPEN_URL     = API_BASE + "/api/open";
+const PENDING_URL  = API_BASE + "/api/pending";
+const STATIONS_URL = API_BASE + "/api/stations";
+
+const COUNTRY_NAMES = {KE:"Kenya",UG:"Uganda",TZ:"Tanzania",RW:"Rwanda",BI:"Burundi",ET:"Ethiopia",SO:"Somalia",SS:"South Sudan",SD:"Sudan",GH:"Ghana",NG:"Nigeria",BJ:"Benin",TG:"Togo",CI:"Cote d'Ivoire",ML:"Mali",BF:"Burkina Faso",NE:"Niger",SN:"Senegal",CM:"Cameroon",CF:"Central African Republic",CD:"DR Congo",CG:"Congo",GA:"Gabon",MW:"Malawi",ZM:"Zambia",ZW:"Zimbabwe",MZ:"Mozambique",ZA:"South Africa",MG:"Madagascar",AO:"Angola",NA:"Namibia",BW:"Botswana",LS:"Lesotho",SZ:"Eswatini",GM:"Gambia",GN:"Guinea",SL:"Sierra Leone",LR:"Liberia",GW:"Guinea-Bissau",TD:"Chad",US:"United States",DE:"Germany",NL:"Netherlands",BE:"Belgium",CH:"Switzerland",CR:"Costa Rica"};
+const SAFE = ['#88CCEE','#CC6677','#DDCC77','#117733','#332288','#AA4499','#44AA99','#999933','#882255','#661100','#6699CC','#888888'];
+const CHART_BG="#334155", CHART_FONT="#E2E8F0", CHART_GRID="#475569";
+const cname = c => COUNTRY_NAMES[c] || c || "Unknown";
+const esc = s => String(s==null?"":s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+/* ============================ STATE ============================ */
+let STATE={stations:[],open:[],pending:[],byStation:{},loggerBy:{}};
+let map,layer,arcmap,arclayer,firstFit=null,arcFirstFit=null;
+let HL={1:new Set(),2:new Set(),3:new Set(),4:new Set()};
+
+/* ============================ HARDWARE ============================ */
+function hw(sid,logger){
+  sid=(sid||"").toUpperCase(); const g=(logger||"").replace(/\s/g,"").toUpperCase();
+  const meter=sid.startsWith("TA")&&(g.startsWith("06")||g.startsWith("Z6")||g.startsWith("A"));
+  const camp =sid.startsWith("TA")&&(g.startsWith("C")||g.startsWith("CR"));
+  const eco  =sid.startsWith("TE");
+  const hydro=sid.startsWith("TH");
+  const other=!(meter||camp||eco||hydro);
+  return {meter,camp,eco,hydro,other};
+}
+const isArcus=(name,sid)=> (name||"").toUpperCase().includes("ARCUS")||(sid||"").toUpperCase().startsWith("TE");
+
+/* ============================ FETCH ============================ */
+async function getJSON(url){const r=await fetch(url,{cache:"no-store"});if(!r.ok)throw new Error("HTTP "+r.status);return r.json();}
+const arr = p => Array.isArray(p)?p:(p&&p.data?p.data:[]);
+
+async function loadAll(){
+  setStatus(true,"loading…");
+  try{
+    const [op,pe,st]=await Promise.all([getJSON(OPEN_URL),getJSON(PENDING_URL),getJSON(STATIONS_URL)]);
+    const openT=arr(op),pendT=arr(pe),stations=arr(st);
+    const byStation={},loggerBy={};
+    openT.forEach(t=>{const s=t.station||(t.site&&t.site.SiteCode);if(s){if(!byStation[s])byStation[s]={status:"open",t};if(t.deviceId&&!loggerBy[s])loggerBy[s]=t.deviceId;}});
+    pendT.forEach(t=>{const s=t.station||(t.site&&t.site.SiteCode);if(s){if(!byStation[s])byStation[s]={status:"pending",t};if(t.deviceId&&!loggerBy[s])loggerBy[s]=t.deviceId;}});
+    STATE={stations,open:openT,pending:pendT,byStation,loggerBy};
+    document.getElementById("banner").style.display="none";
+    populateScope(); renderActiveTab();
+    setStatus(false,"🟢 Live · updated "+new Date().toLocaleTimeString());
+  }catch(e){
+    setStatus(false,"error: "+e.message,true);
+    showBanner(e);
+  }
+}
+function showBanner(e){
+  const b=document.getElementById("banner");
+  b.style.display="block";
+  if(location.protocol==="file:"){
+    b.innerHTML="⚠️ <b>Can’t reach the data proxy.</b> This page needs the local server running. "+
+      "Start it first: run <code>python tahmo_server.py</code> (or double-click <code>start_tahmo</code>), "+
+      "then open <code>http://localhost:"+PORT+"</code>.";
+  }else{
+    b.innerHTML="⚠️ <b>Failed to fetch.</b> The proxy at <code>"+(API_BASE||location.origin)+"</code> didn’t respond. "+
+      "Make sure <code>tahmo_server.py</code> is still running in its terminal window. ("+esc(e.message)+")";
+  }
+}
+
+/* ============================ HELPERS ============================ */
+function setStatus(loading,msg,err){const el=document.getElementById("status");el.className="sb-status"+(err?" err":"");el.innerHTML=(loading?'<span class="spin"></span> ':'')+msg;}
+const scopeVal=()=>document.getElementById("scope").value;
+const inScope=code=>scopeVal()==="__ALL__"||cname(code)===scopeVal();
+const scopeName=()=>scopeVal()==="__ALL__"?"Pan-Africa":scopeVal();
+const chk=id=>document.getElementById(id).checked;
+function populateScope(){
+  const sel=document.getElementById("scope"),cur=sel.value;
+  const names=[...new Set(STATE.stations.map(s=>cname(s.country_code)))].sort();
+  sel.innerHTML='<option value="__ALL__">🌍 Pan-Africa (All Countries)</option>'+names.map(n=>`<option>${n}</option>`).join("");
+  if([...sel.options].some(o=>o.value===cur))sel.value=cur;
+}
+function scoped(){return STATE.stations.filter(s=>inScope(s.country_code));}
+function loggerFor(sid){return STATE.loggerBy[sid]||"";}
+function daysSince(iso){if(!iso)return"N/A";const d=(Date.now()-new Date(iso).getTime())/864e5;return isNaN(d)?"N/A":Math.floor(d);}
+
+/* ============================ SIDEBAR COUNTS ============================ */
+function updateCounts(){
+  const sc=scoped(); let m=0,c=0,e=0,h=0,o=0,arc=0,open=0,pend=0,heal=0;
+  sc.forEach(s=>{
+    const k=hw(s.id,loggerFor(s.id));
+    if(k.meter)m++;else if(k.camp)c++;else if(k.eco)e++;else if(k.hydro)h++;else o++;
+    if(isArcus(s.name,s.id))arc++;
+    const b=STATE.byStation[s.id];
+    if(b&&b.status==="open")open++;else if(b&&b.status==="pending")pend++;else heal++;
+  });
+  const set=(id,v)=>document.getElementById(id).textContent=v;
+  set("c_base",sc.length);set("c_meter",m);set("c_camp",c);set("c_eco",e);set("c_hydro",h);set("c_other",o);
+  set("c_arc",arc);set("c_open",open);set("c_pend",pend);set("c_heal",heal);
+}
+
+/* ============================ METRICS ============================ */
+function metrics(){
+  const sc=scoped(),total=sc.length;
+  let openS=new Set(),pendS=new Set(),arcFault=0;
+  sc.forEach(s=>{const b=STATE.byStation[s.id];
+    if(b&&b.status==="open"){openS.add(s.id);if(isArcus(s.name,s.id))arcFault++;}
+    else if(b&&b.status==="pending")pendS.add(s.id);});
+  const openTk=STATE.open.filter(t=>inScope((t.site||{}).Country)).length;
+  const pendTk=STATE.pending.filter(t=>inScope((t.site||{}).Country)).length;
+  const noTk=total-openS.size-pendS.size;
+  const offWk=sc.filter(s=>s.offline_week).length;
+  const health=total?Math.round((total-openS.size)/total*1000)/10:0;
+  return {total,openSites:openS.size,pendSites:pendS.size,openTk,pendTk,noTk,offWk,arcFault,health};
+}
+const pill=(l,v,s,col)=>`<div class="metric-pill"><div class="l">${l}</div><div class="v" style="color:${col}">${v}</div>${s?`<div class="s">${s}</div>`:""}</div>`;
+function renderPills(){
+  const m=metrics();
+  document.getElementById("hdr-country").textContent=scopeName()+" · Network Overview";
+  document.getElementById("hdr-sub").textContent="TAHMO Live Ticket Dashboard · updated "+new Date().toLocaleTimeString();
+  document.getElementById("pills").innerHTML=[
+    pill("Total Stations",m.total,"","#7DD3FC"),
+    pill("🔴 Open Tickets",m.openSites,m.openTk+" ticket(s)","#F87171"),
+    pill("🟡 Pending",m.pendSites,m.pendTk+" ticket(s)","#FCD34D"),
+    pill("🟢 No Tickets",m.noTk,"stations clear","#4ADE80"),
+    pill("⚡ ARCUS Faults",m.arcFault,"","#C084FC"),
+    pill("✅ Health",m.health+"%","","#4ADE80"),
+  ].join("");
+}
+
+/* ============================ MAP ============================ */
+function ensureMap(){
+  if(map)return;
+  map=L.map("map",{scrollWheelZoom:true,worldCopyJump:true}).setView([0.5,20],4);
+  L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",{attribution:"&copy; OSM &copy; CARTO",maxZoom:19}).addTo(map);
+  layer=L.layerGroup().addTo(map);
+}
+function popup(s,b){
+  const rows=[["Station ID",s.id],["Logger ID",loggerFor(s.id)||"N/A"],["Site Name",s.name],
+    ["Battery",s.battery!=null?s.battery+"%":"N/A"],
+    ["Last Measurement",s.last_measurement?new Date(s.last_measurement).toLocaleString():"N/A"],
+    ["Days Offline",daysSince(s.last_measurement)]];
+  let title;
+  if(b){const t=b.t;
+    rows.push(["Ticket Issue",t.title||"N/A"],["Issue Category",(t.labels||[]).join(", ")||"N/A"],
+      ["Assigned To",(t.assignee||{}).full_name||"N/A"],
+      ["Ticket Opened",t.created_at?new Date(t.created_at).toLocaleDateString():"N/A"]);
+    if(t.ticket_id)rows.push(["Ticket",`<a href="https://tickets.tahmo.org/issues/${t.ticket_id}" target="_blank">Open ↗</a>`]);
+    title=b.status==="open"?"🔴 Active Fault":"🟡 Pending Fix";
+  }else title=s.active?"🟢 Active Station":"⚫ Inactive";
+  return `<div style="min-width:230px"><b>${title}: ${esc(s.name||s.id)}</b><table style="width:100%;margin-top:6px">`+
+    rows.map(([k,v])=>`<tr><td class="pk">${k}</td><td class="pv">${k==="Ticket"?v:esc(v)}</td></tr>`).join("")+`</table></div>`;
+}
+function renderMap(){
+  ensureMap(); layer.clearLayers();
+  const sc=scoped();
+  const anyHw=chk("hw_meter")||chk("hw_camp")||chk("hw_eco")||chk("hw_hydro")||chk("hw_other")||chk("arc_master");
+  const pts=[];
+  sc.forEach(s=>{
+    const lat=s.latitude,lon=s.longitude; if(lat==null||lon==null)return;
+    const sid=(s.id||"").toUpperCase(), k=hw(s.id,loggerFor(s.id)), arc=isArcus(s.name,s.id);
+    if(anyHw){
+      let pass=false;
+      if(chk("hw_meter")&&k.meter)pass=true;
+      if(chk("hw_camp")&&k.camp)pass=true;
+      if(chk("hw_eco")&&k.eco)pass=true;
+      if(chk("hw_hydro")&&k.hydro)pass=true;
+      if(chk("hw_other")&&k.other)pass=true;
+      if(chk("arc_master")&&arc){if(chk("arc_ta")&&sid.startsWith("TA"))pass=true;if(chk("arc_te")&&sid.startsWith("TE"))pass=true;}
+      if(!pass)return;
+    }
+    const b=STATE.byStation[s.id], hasOpen=b&&b.status==="open", hasPend=b&&b.status==="pending";
+    const html=popup(s,b);
+    // Layer 1: base black dot
+    if(chk("l_base"))L.circleMarker([lat,lon],{radius:3.5,color:"#000",weight:0,fillColor:"#000",fillOpacity:1}).bindPopup(html).addTo(layer);
+    // Layer 2: ticket overlay
+    if(chk("tk_overlay")){
+      if(hasOpen&&chk("tk_open"))L.circleMarker([lat,lon],{radius:6.5,color:"#7F1D1D",weight:1.5,fillColor:"#EF4444",fillOpacity:.9}).bindPopup(html).addTo(layer);
+      else if(hasPend&&chk("tk_pend"))L.circleMarker([lat,lon],{radius:6.5,color:"#78350F",weight:1.5,fillColor:"#F59E0B",fillOpacity:.9}).bindPopup(html).addTo(layer);
+      else if(!hasOpen&&!hasPend&&chk("tk_heal"))L.circleMarker([lat,lon],{radius:6.5,color:"#064E3B",weight:1.5,fillColor:"#10B981",fillOpacity:.9}).bindPopup(html).addTo(layer);
+    }
+    // Layer 3: hardware rings
+    if(chk("hw_meter")&&k.meter)ring(lat,lon,9,"#1E3A8A");
+    if(chk("hw_camp")&&k.camp)ring(lat,lon,9,"#2563EB");
+    if(chk("hw_eco")&&k.eco)ring(lat,lon,9,"#10B981");
+    if(chk("hw_hydro")&&k.hydro)ring(lat,lon,9,"#F59E0B");
+    if(chk("hw_other")&&k.other)ring(lat,lon,9,"#64748B");
+    // Layer 4: ARCUS rings
+    if(chk("arc_master")&&arc){
+      if(chk("arc_ta")&&sid.startsWith("TA"))ring(lat,lon,13,"#6D28D9",2.5,html);
+      if(chk("arc_te")&&sid.startsWith("TE"))ring(lat,lon,13,"#DB2777",2.5,html);
+    }
+    // Layer 5: highlights
+    if(HL[1].has(sid))ring(lat,lon,9,"#EF4444");
+    if(HL[2].has(sid))ring(lat,lon,9,"#2563EB");
+    if(HL[3].has(sid))ring(lat,lon,9,"#16A34A");
+    if(HL[4].has(sid))ring(lat,lon,9,"#F97316");
+    pts.push([lat,lon]);
+  });
+  if(pts.length&&firstFit!==scopeVal()){try{map.fitBounds(pts,{padding:[30,30],maxZoom:7});}catch(e){}firstFit=scopeVal();}
+  setTimeout(()=>map.invalidateSize(),50);
+}
+function ring(lat,lon,r,color,w,html){const m=L.circleMarker([lat,lon],{radius:r,color:color,weight:w||2,fill:false});if(html)m.bindPopup(html);m.addTo(layer);}
+
+/* ============================ ARCUS TAB ============================ */
+function renderArcus(){
+  if(!arcmap){arcmap=L.map("arcmap",{scrollWheelZoom:true}).setView([0.5,20],4);
+    L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",{attribution:"&copy; OSM &copy; CARTO"}).addTo(arcmap);
+    arclayer=L.layerGroup().addTo(arcmap);}
+  arclayer.clearLayers();
+  const list=scoped().filter(s=>isArcus(s.name,s.id));
+  const pts=[],rows=[];
+  list.forEach(s=>{
+    rows.push(`<tr><td>${esc(s.id)}</td><td>${esc(s.name)}</td><td>${esc(cname(s.country_code))}</td></tr>`);
+    if(s.latitude==null||s.longitude==null)return;
+    const color=(s.id||"").toUpperCase().startsWith("TA")?"#6366F1":"#EC4899";
+    L.circleMarker([s.latitude,s.longitude],{radius:6,color:color,fillColor:color,fillOpacity:.7,weight:1}).bindPopup(popup(s,STATE.byStation[s.id])).addTo(arclayer);
+    pts.push([s.latitude,s.longitude]);
+  });
+  document.querySelector("#arctable tbody").innerHTML=rows.join("")||'<tr><td colspan="3" style="color:#64748B">No ARCUS stations in scope</td></tr>';
+  if(pts.length&&arcFirstFit!==scopeVal()){try{arcmap.fitBounds(pts,{padding:[30,30],maxZoom:7});}catch(e){}arcFirstFit=scopeVal();}
+  setTimeout(()=>arcmap.invalidateSize(),50);
+}
+
+/* ============================ ANALYTICS TAB ============================ */
+function renderAnalytics(){
+  const m=metrics();
+  document.getElementById("an-country").textContent=scopeName()+" · Workspace Insights";
+  document.getElementById("an-pills").innerHTML=[
+    pill("Total Nodes",m.total,"","#94A3B8"),
+    pill("Affected Sites",m.openSites+m.pendSites,`🔴 ${m.openSites} open · 🟡 ${m.pendSites} pending`,"#EA580C"),
+    pill("ARCUS Faults",m.arcFault,"","#DC2626"),
+    pill("✅ Stability",m.health+"%","","#16A34A"),
+  ].join("");
+  const ids=new Set(scoped().map(s=>s.id));
+  const pool=STATE.open.filter(t=>ids.has(t.station)).concat(STATE.pending.filter(t=>ids.has(t.station)));
+  const catC={},issC={},catStations={},issStations={};
+  pool.forEach(t=>{
+    const cat=((t.labels||[]).filter(l=>l&&l.toLowerCase()!=="none").join(", "))||"Uncategorised";
+    const iss=t.title||"Unspecified";
+    catC[cat]=(catC[cat]||0)+1; issC[iss]=(issC[iss]||0)+1;
+    (catStations[cat]=catStations[cat]||[]).push(t.station);
+    (issStations[iss]=issStations[iss]||[]).push(t.station);
+  });
+  const total=pool.length;
+  document.getElementById("an-info").innerHTML=`Showing <strong>${total}</strong> tickets in scope. Expand a category or fault type to see associated stations.`;
+  // Donut
+  const cats=Object.keys(catC);
+  Plotly.react("pie",[{type:"pie",hole:.4,labels:cats,values:cats.map(c=>catC[c]),marker:{colors:SAFE},textfont:{color:"#0F172A"}}],
+    {title:{text:"Incident Category Spread",font:{color:CHART_FONT}},paper_bgcolor:CHART_BG,plot_bgcolor:CHART_BG,font:{color:CHART_FONT},legend:{font:{color:CHART_FONT}},margin:{t:44,b:20,l:20,r:20}},{displayModeBar:false,responsive:true});
+  // Bar
+  const iss=Object.keys(issC).sort((a,b)=>issC[b]-issC[a]);
+  Plotly.react("bar",[{type:"bar",x:iss,y:iss.map(i=>issC[i]),marker:{color:"#3B82F6"}}],
+    {title:{text:"Specific Fault Breakdown",font:{color:CHART_FONT}},paper_bgcolor:CHART_BG,plot_bgcolor:CHART_BG,font:{color:CHART_FONT},margin:{t:44,b:90,l:40,r:20},xaxis:{tickangle:-30,color:CHART_FONT,gridcolor:CHART_GRID},yaxis:{color:CHART_FONT,gridcolor:CHART_GRID}},{displayModeBar:false,responsive:true});
+  // Drilldowns
+  const dd=(obj,stObj)=>Object.keys(obj).sort().map(k=>{
+    const list=[...new Set(stObj[k])]; const pct=total?Math.round(list.length/total*100):0;
+    return `<details class="dd"><summary>${esc(k)} · ${list.length} station(s) (${pct}%)</summary><code>${esc(list.join(", ")||"None")}</code></details>`;
+  }).join("");
+  document.getElementById("dd-cat").innerHTML=dd(catC,catStations)||'<div class="info-panel">None</div>';
+  document.getElementById("dd-issue").innerHTML=dd(issC,issStations)||'<div class="info-panel">None</div>';
+}
+
+/* ============================ TRENDS TAB (localStorage) ============================ */
+const SNAP_KEY="tahmo_snapshots_v1";
+function loadSnaps(){try{return JSON.parse(localStorage.getItem(SNAP_KEY))||[];}catch(e){return[];}}
+function saveSnapshot(){
+  const m=metrics();
+  const openIds=scoped().filter(s=>STATE.byStation[s.id]&&STATE.byStation[s.id].status==="open").map(s=>s.id);
+  const pendIds=scoped().filter(s=>STATE.byStation[s.id]&&STATE.byStation[s.id].status==="pending").map(s=>s.id);
+  const snaps=loadSnaps();
+  snaps.push({stamp:new Date().toISOString().slice(0,16).replace("T"," "),scope:scopeName(),
+    total:m.total,openTk:m.openTk,pendTk:m.pendTk,openSites:m.openSites,pendSites:m.pendSites,health:m.health,openIds,pendIds});
+  localStorage.setItem(SNAP_KEY,JSON.stringify(snaps));
+  setStatus(false,"📸 snapshot saved ("+snaps.length+")");
+  if(document.querySelector('[data-tab="trends"]').classList.contains("active"))renderTrends();
+}
+function renderTrends(){
+  document.getElementById("tr-country").textContent=scopeName()+" · Trends & Change Detection";
+  const snaps=loadSnaps().filter(s=>scopeVal()==="__ALL__"||s.scope===scopeName());
+  const empty=document.getElementById("tr-empty"),content=document.getElementById("tr-content");
+  if(!snaps.length){empty.style.display="block";content.classList.add("hide");return;}
+  empty.style.display="none";content.classList.remove("hide");
+  const x=snaps.map(s=>s.stamp);
+  Plotly.react("tr-line",[
+    {x,y:snaps.map(s=>s.openTk),name:"Open",mode:"lines+markers",line:{color:"#EF4444"}},
+    {x,y:snaps.map(s=>s.pendTk),name:"Pending",mode:"lines+markers",line:{color:"#F59E0B"}}],
+    {title:{text:"Open vs Pending tickets",font:{color:CHART_FONT}},paper_bgcolor:CHART_BG,plot_bgcolor:CHART_BG,font:{color:CHART_FONT},legend:{font:{color:CHART_FONT}},margin:{t:44,b:40,l:40,r:20},xaxis:{color:CHART_FONT,gridcolor:CHART_GRID},yaxis:{color:CHART_FONT,gridcolor:CHART_GRID}},{displayModeBar:false,responsive:true});
+  Plotly.react("tr-health",[{x,y:snaps.map(s=>s.health),mode:"lines+markers",line:{color:"#10B981"}}],
+    {title:{text:"Health %",font:{color:CHART_FONT}},paper_bgcolor:CHART_BG,plot_bgcolor:CHART_BG,font:{color:CHART_FONT},margin:{t:44,b:40,l:40,r:20},xaxis:{color:CHART_FONT,gridcolor:CHART_GRID},yaxis:{color:CHART_FONT,gridcolor:CHART_GRID}},{displayModeBar:false,responsive:true});
+  const dEl=document.getElementById("tr-delta");
+  if(snaps.length>=2){
+    const a=snaps[snaps.length-2],b=snaps[snaps.length-1];
+    const prev=new Set(a.openIds||[]),curr=new Set(b.openIds||[]);
+    const nw=[...curr].filter(x=>!prev.has(x)),rs=[...prev].filter(x=>!curr.has(x)),ps=[...curr].filter(x=>prev.has(x));
+    dEl.innerHTML=[["🆕 Newly faulted",nw.length,"#F87171"],["✅ Resolved",rs.length,"#4ADE80"],["⏳ Still faulted",ps.length,"#FCD34D"]]
+      .map(([l,v,c])=>`<div class="m"><div class="l">${l}</div><div class="v" style="color:${c}">${v}</div></div>`).join("");
+    document.getElementById("tr-new-sum").textContent=`🆕 Newly faulted (${nw.length})`;
+    document.getElementById("tr-res-sum").textContent=`✅ Resolved (${rs.length})`;
+    document.getElementById("tr-new").textContent=nw.join(", ")||"None";
+    document.getElementById("tr-res").textContent=rs.join(", ")||"None";
+  }else{
+    dEl.innerHTML='<div class="info-panel">Save at least two snapshots to see change detection.</div>';
+    document.getElementById("tr-new").textContent="—";document.getElementById("tr-res").textContent="—";
+  }
+}
+
+/* ============================ TAB SWITCHING ============================ */
+let ACTIVE="map";
+function renderActiveTab(){
+  updateCounts();
+  if(ACTIVE==="map")renderPills(),renderMap();
+  else if(ACTIVE==="arcus")renderArcus();
+  else if(ACTIVE==="analytics")renderAnalytics();
+  else if(ACTIVE==="trends")renderTrends();
+}
+document.querySelectorAll(".tabs button").forEach(btn=>btn.addEventListener("click",()=>{
+  document.querySelectorAll(".tabs button").forEach(b=>b.classList.remove("active"));
+  btn.classList.add("active");ACTIVE=btn.dataset.tab;
+  ["map","arcus","analytics","trends"].forEach(t=>document.getElementById("tab-"+t).classList.toggle("hide",t!==ACTIVE));
+  renderActiveTab();
+}));
+
+/* ============================ EVENTS ============================ */
+document.getElementById("scope").addEventListener("change",()=>{firstFit=null;arcFirstFit=null;renderActiveTab();});
+["l_base","hw_meter","hw_camp","hw_eco","hw_hydro","hw_other","arc_master","arc_ta","arc_te","tk_overlay","tk_open","tk_pend","tk_heal"]
+  .forEach(id=>document.getElementById(id).addEventListener("change",()=>{if(id==="arc_master")document.getElementById("arc_subs").style.display=chk("arc_master")?"block":"none";updateCounts();if(ACTIVE==="map")renderMap();}));
+document.getElementById("hl_apply").addEventListener("click",()=>{
+  const parse=v=>new Set((v||"").split(/[,\s]+/).map(x=>x.trim().toUpperCase()).filter(Boolean));
+  HL[1]=parse(document.getElementById("hl1").value);HL[2]=parse(document.getElementById("hl2").value);
+  HL[3]=parse(document.getElementById("hl3").value);HL[4]=parse(document.getElementById("hl4").value);
+  if(ACTIVE==="map")renderMap();
+});
+document.getElementById("btn_refresh").addEventListener("click",loadAll);
+document.getElementById("btn_snap").addEventListener("click",saveSnapshot);
+document.getElementById("tr-clear").addEventListener("click",()=>{if(confirm("Delete all saved snapshots?")){localStorage.removeItem(SNAP_KEY);renderTrends();}});
+
+loadAll();
+setInterval(loadAll,REFRESH_MINUTES*60*1000);
+</script>
+</body>
+</html>
