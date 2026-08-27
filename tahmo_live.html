@@ -229,15 +229,28 @@
   <section id="tab-arcus" class="hide">
     <div class="page-header">
       <div><div class="country">ARCUS · Isolated Asset View</div>
-      <div class="sub">Dedicated map and register for ARCUS-tagged stations</div></div>
+      <div class="sub">Dedicated map, register and fault analytics for ARCUS-tagged stations</div></div>
     </div>
+    <div class="metric-strip" id="arc-pills"></div>
+    <div class="info-panel">🟪/🟩 ring = hardware type (METER Setup / Ecowit Setup) · 🔴🟡🟢 fill = ticket status (open / pending / healthy)</div>
     <div class="grid2">
       <div class="map-wrap"><div id="arcmap"></div></div>
       <div class="card"><div class="section-label" style="margin-top:0">Asset Register</div>
         <div style="max-height:520px;overflow:auto">
-          <table class="tbl" id="arctable"><thead><tr><th>Station</th><th>Site</th><th>Country</th></tr></thead><tbody></tbody></table>
+          <table class="tbl" id="arctable"><thead><tr><th>Station</th><th>Site</th><th>Country</th><th>Status</th><th>Issue</th></tr></thead><tbody></tbody></table>
         </div>
       </div>
+    </div>
+    <div class="section-label">ARCUS Fault Distribution</div>
+    <div class="grid2">
+      <div class="card"><div id="arc-pie" style="height:340px"></div></div>
+      <div class="card"><div id="arc-bar" style="height:340px"></div></div>
+    </div>
+    <div class="section-label">ARCUS Ticket Registry Drill-Down</div>
+    <div class="info-panel" id="arc-info">—</div>
+    <div class="grid2">
+      <div><div class="section-label">By Incident Category</div><div id="arc-dd-cat"></div></div>
+      <div><div class="section-label">By Fault Type</div><div id="arc-dd-issue"></div></div>
     </div>
   </section>
 
@@ -485,6 +498,52 @@ function renderMap(){
 }
 function ring(lat,lon,r,color,w,html){const m=L.circleMarker([lat,lon],{radius:r,color:color,weight:w||2,fill:false});if(html)m.bindPopup(html);m.addTo(layer);}
 
+/* ============================ FAULT ANALYTICS HELPERS (shared) ============================ */
+function statusBadge(b){
+  if(b&&b.status==="open")return '<span style="color:#B42318;font-weight:700">🔴 Open</span>';
+  if(b&&b.status==="pending")return '<span style="color:#92400E;font-weight:700">🟡 Pending</span>';
+  return '<span style="color:#04785A;font-weight:700">🟢 Healthy</span>';
+}
+function arcusMetrics(list){
+  const ids=new Set(list.map(s=>s.id)),total=list.length;
+  let openS=new Set(),pendS=new Set();
+  list.forEach(s=>{const b=STATE.byStation[s.id];
+    if(b&&b.status==="open")openS.add(s.id);else if(b&&b.status==="pending")pendS.add(s.id);});
+  const openTk=STATE.open.filter(t=>ids.has(t.station)).length;
+  const pendTk=STATE.pending.filter(t=>ids.has(t.station)).length;
+  const health=total?Math.round((total-openS.size)/total*1000)/10:0;
+  return {total,openSites:openS.size,pendSites:pendS.size,openTk,pendTk,noTk:total-openS.size-pendS.size,health};
+}
+function ticketBreakdown(list){
+  const ids=new Set(list.map(s=>s.id));
+  const pool=STATE.open.filter(t=>ids.has(t.station)).concat(STATE.pending.filter(t=>ids.has(t.station)));
+  const catC={},issC={},catStations={},issStations={};
+  pool.forEach(t=>{
+    const cat=((t.labels||[]).filter(l=>l&&l.toLowerCase()!=="none").join(", "))||"Uncategorised";
+    const iss=t.title||"Unspecified";
+    catC[cat]=(catC[cat]||0)+1; issC[iss]=(issC[iss]||0)+1;
+    (catStations[cat]=catStations[cat]||[]).push(t.station);
+    (issStations[iss]=issStations[iss]||[]).push(t.station);
+  });
+  return {pool,catC,issC,catStations,issStations};
+}
+function renderFaultCharts(pieId,barId,catC,issC){
+  const cats=Object.keys(catC);
+  Plotly.react(pieId,[{type:"pie",hole:.4,labels:cats,values:cats.map(c=>catC[c]),marker:{colors:SAFE},textfont:{color:"#0F172A"}}],
+    {title:{text:"Incident Category Spread",font:{color:CHART_FONT}},paper_bgcolor:CHART_BG,plot_bgcolor:CHART_BG,font:{color:CHART_FONT},legend:{font:{color:CHART_FONT}},margin:{t:44,b:20,l:20,r:20}},{displayModeBar:false,responsive:true});
+  const iss=Object.keys(issC).sort((a,b)=>issC[b]-issC[a]);
+  Plotly.react(barId,[{type:"bar",x:iss,y:iss.map(i=>issC[i]),marker:{color:"#5B5FEE"}}],
+    {title:{text:"Specific Fault Breakdown",font:{color:CHART_FONT}},paper_bgcolor:CHART_BG,plot_bgcolor:CHART_BG,font:{color:CHART_FONT},margin:{t:44,b:90,l:40,r:20},xaxis:{tickangle:-30,color:CHART_FONT,gridcolor:CHART_GRID},yaxis:{color:CHART_FONT,gridcolor:CHART_GRID}},{displayModeBar:false,responsive:true});
+}
+function renderDrilldownPair(catElId,issElId,catC,issC,catStations,issStations,total){
+  const dd=(obj,stObj)=>Object.keys(obj).sort().map(k=>{
+    const l=[...new Set(stObj[k])]; const pct=total?Math.round(l.length/total*100):0;
+    return `<details class="dd"><summary>${esc(k)} · ${l.length} station(s) (${pct}%)</summary><code>${esc(l.join(", ")||"None")}</code></details>`;
+  }).join("");
+  document.getElementById(catElId).innerHTML=dd(catC,catStations)||'<div class="info-panel">None</div>';
+  document.getElementById(issElId).innerHTML=dd(issC,issStations)||'<div class="info-panel">None</div>';
+}
+
 /* ============================ ARCUS TAB ============================ */
 function renderArcus(){
   if(!arcmap){arcmap=L.map("arcmap",{scrollWheelZoom:true}).setView([0.5,20],4);
@@ -492,17 +551,39 @@ function renderArcus(){
     arclayer=L.layerGroup().addTo(arcmap);}
   arclayer.clearLayers();
   const list=scoped().filter(s=>isArcus(s.name,s.id));
-  const pts=[],rows=[];
+
+  const m=arcusMetrics(list);
+  document.getElementById("arc-pills").innerHTML=[
+    pill("ARCUS Stations",m.total,"","#7C3AED"),
+    pill("🔴 Open Faults",m.openSites,m.openTk+" ticket(s)","#DC2626"),
+    pill("🟡 Pending",m.pendSites,m.pendTk+" ticket(s)","#B45309"),
+    pill("🟢 Healthy",m.noTk,"stations clear","#04785A"),
+    pill("✅ Health",m.health+"%","","#04785A"),
+  ].join("");
+
+  const pts=[],rowData=[];
   list.forEach(s=>{
-    rows.push(`<tr><td>${esc(s.id)}</td><td>${esc(s.name)}</td><td>${esc(cname(s.country_code))}</td></tr>`);
+    const b=STATE.byStation[s.id];
+    const sevRank=b&&b.status==="open"?0:(b&&b.status==="pending"?1:2);
+    rowData.push({s,b,sevRank});
     if(s.latitude==null||s.longitude==null)return;
-    const color=(s.id||"").toUpperCase().startsWith("TA")?"#8B5CF6":"#EC4899";
-    L.circleMarker([s.latitude,s.longitude],{radius:6,color:color,fillColor:color,fillOpacity:.7,weight:1}).bindPopup(popup(s,STATE.byStation[s.id])).addTo(arclayer);
+    const ringColor=(s.id||"").toUpperCase().startsWith("TA")?"#8B5CF6":"#EC4899";
+    const hasOpen=b&&b.status==="open",hasPend=b&&b.status==="pending";
+    const fill=hasOpen?"#EF4444":hasPend?"#F59E0B":"#10B981";
+    L.circleMarker([s.latitude,s.longitude],{radius:7,color:ringColor,weight:2.5,fillColor:fill,fillOpacity:.9}).bindPopup(popup(s,b)).addTo(arclayer);
     pts.push([s.latitude,s.longitude]);
   });
-  document.querySelector("#arctable tbody").innerHTML=rows.join("")||'<tr><td colspan="3" style="color:var(--text-400)">No ARCUS stations in scope</td></tr>';
+  rowData.sort((a,b2)=>a.sevRank-b2.sevRank||String(a.s.id).localeCompare(b2.s.id));
+  const rows=rowData.map(({s,b})=>`<tr><td>${esc(s.id)}</td><td>${esc(s.name)}</td><td>${esc(cname(s.country_code))}</td><td>${statusBadge(b)}</td><td>${esc(b?(b.t.title||"—"):"—")}</td></tr>`);
+  document.querySelector("#arctable tbody").innerHTML=rows.join("")||'<tr><td colspan="5" style="color:var(--text-400)">No ARCUS stations in scope</td></tr>';
   if(pts.length&&arcFirstFit!==scopeVal()){try{arcmap.fitBounds(pts,{padding:[30,30],maxZoom:7});}catch(e){}arcFirstFit=scopeVal();}
   setTimeout(()=>arcmap.invalidateSize(),50);
+
+  const {pool,catC,issC,catStations,issStations}=ticketBreakdown(list);
+  const total=pool.length;
+  document.getElementById("arc-info").innerHTML=`Showing <strong>${total}</strong> ticket(s) across <strong>${m.total}</strong> ARCUS station(s) in scope. Expand a category or fault type to see associated stations.`;
+  renderFaultCharts("arc-pie","arc-bar",catC,issC);
+  renderDrilldownPair("arc-dd-cat","arc-dd-issue",catC,issC,catStations,issStations,total);
 }
 
 /* ============================ ANALYTICS TAB ============================ */
@@ -515,33 +596,11 @@ function renderAnalytics(){
     pill("ARCUS Faults",m.arcFault,"","#7C3AED"),
     pill("✅ Stability",m.health+"%","","#04785A"),
   ].join("");
-  const ids=new Set(scoped().map(s=>s.id));
-  const pool=STATE.open.filter(t=>ids.has(t.station)).concat(STATE.pending.filter(t=>ids.has(t.station)));
-  const catC={},issC={},catStations={},issStations={};
-  pool.forEach(t=>{
-    const cat=((t.labels||[]).filter(l=>l&&l.toLowerCase()!=="none").join(", "))||"Uncategorised";
-    const iss=t.title||"Unspecified";
-    catC[cat]=(catC[cat]||0)+1; issC[iss]=(issC[iss]||0)+1;
-    (catStations[cat]=catStations[cat]||[]).push(t.station);
-    (issStations[iss]=issStations[iss]||[]).push(t.station);
-  });
+  const {pool,catC,issC,catStations,issStations}=ticketBreakdown(scoped());
   const total=pool.length;
   document.getElementById("an-info").innerHTML=`Showing <strong>${total}</strong> tickets in scope. Expand a category or fault type to see associated stations.`;
-  // Donut
-  const cats=Object.keys(catC);
-  Plotly.react("pie",[{type:"pie",hole:.4,labels:cats,values:cats.map(c=>catC[c]),marker:{colors:SAFE},textfont:{color:"#0F172A"}}],
-    {title:{text:"Incident Category Spread",font:{color:CHART_FONT}},paper_bgcolor:CHART_BG,plot_bgcolor:CHART_BG,font:{color:CHART_FONT},legend:{font:{color:CHART_FONT}},margin:{t:44,b:20,l:20,r:20}},{displayModeBar:false,responsive:true});
-  // Bar
-  const iss=Object.keys(issC).sort((a,b)=>issC[b]-issC[a]);
-  Plotly.react("bar",[{type:"bar",x:iss,y:iss.map(i=>issC[i]),marker:{color:"#5B5FEE"}}],
-    {title:{text:"Specific Fault Breakdown",font:{color:CHART_FONT}},paper_bgcolor:CHART_BG,plot_bgcolor:CHART_BG,font:{color:CHART_FONT},margin:{t:44,b:90,l:40,r:20},xaxis:{tickangle:-30,color:CHART_FONT,gridcolor:CHART_GRID},yaxis:{color:CHART_FONT,gridcolor:CHART_GRID}},{displayModeBar:false,responsive:true});
-  // Drilldowns
-  const dd=(obj,stObj)=>Object.keys(obj).sort().map(k=>{
-    const list=[...new Set(stObj[k])]; const pct=total?Math.round(list.length/total*100):0;
-    return `<details class="dd"><summary>${esc(k)} · ${list.length} station(s) (${pct}%)</summary><code>${esc(list.join(", ")||"None")}</code></details>`;
-  }).join("");
-  document.getElementById("dd-cat").innerHTML=dd(catC,catStations)||'<div class="info-panel">None</div>';
-  document.getElementById("dd-issue").innerHTML=dd(issC,issStations)||'<div class="info-panel">None</div>';
+  renderFaultCharts("pie","bar",catC,issC);
+  renderDrilldownPair("dd-cat","dd-issue",catC,issC,catStations,issStations,total);
 }
 
 /* ============================ TRENDS TAB (shared daily snapshots + local manual ones) ============================ */
